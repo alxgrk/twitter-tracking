@@ -1,0 +1,33 @@
+{
+
+  "manifest_version": 2,
+  "name": "Twitter Tracking Extension",
+  "version": "1.2",
+
+  "description": "Tracks clicks on twitter.com and collects data for scientific purposes.",
+  "homepage_url": "https://github.com/algxrk/twitter-tracking-extension",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "twittertracking@university.de",
+      "strict_min_version": "42.0"
+    }
+  },
+
+  "permissions": [
+    "$ACCESS_SITE_PERMISSION"
+  ],
+
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.twitter.com/*"],
+      "js": ["js/main.js"]
+    }
+  ]
+
+}

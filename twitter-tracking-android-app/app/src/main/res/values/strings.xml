@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Twitter Tracking</string>
+    <string name="accessibility_service_description">Tracking Twitter clicks.</string>
+</resources>
