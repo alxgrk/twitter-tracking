@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "twittertracking@university.de": {
+      "updates": [
+        {
+          "version": "1.2",
+          "update_link": "https://github.com/alxgrk/twitter-tracking/releases/addon-0.1.xpi"
+        }
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ provider:
               - 'domain/twitter-tracking/*'
 
 package:
-  artifact: build/libs/ktor-lambda-twitter-tracking-fat.jar
+  artifact: build/libs/twitter-tracking-lambda-backend-fat.jar
 
 functions:
   eventApi:

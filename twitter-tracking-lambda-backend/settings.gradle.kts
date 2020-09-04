@@ -1,1 +1,1 @@
-rootProject.name = "ktor-lambda-twitter-tracking"
+rootProject.name = "twitter-tracking-lambda-backend"

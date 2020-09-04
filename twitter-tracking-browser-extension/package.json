@@ -1,5 +1,5 @@
 {
-  "name": "twitter-tracking-extension",
+  "name": "twitter-tracking-browser-extension",
   "version": "1.0.0",
   "description": "A browser extension that captures Twitter clicks - for scientific reasons.",
   "scripts": {
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/alxgrk/twitter-tracking-extension.git"
+    "url": "git+https://github.com/alxgrk/twitter-tracking.git"
   },
   "author": "alxgrk",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/alxgrk/twitter-tracking-extension/issues"
+    "url": "https://github.com/alxgrk/twitter-tracking/issues"
   },
-  "homepage": "https://github.com/alxgrk/twitter-tracking-extension#readme",
+  "homepage": "https://github.com/alxgrk/twitter-tracking#readme",
   "dependencies": {
     "@medv/finder": "^2.0.0",
     "crypto-js": "^4.0.0"

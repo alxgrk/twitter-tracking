@@ -5,12 +5,13 @@
   "version": "1.2",
 
   "description": "Tracks clicks on twitter.com and collects data for scientific purposes.",
-  "homepage_url": "https://github.com/algxrk/twitter-tracking-extension",
+  "homepage_url": "https://github.com/algxrk/twitter-tracking",
 
   "browser_specific_settings": {
     "gecko": {
       "id": "twittertracking@university.de",
-      "strict_min_version": "42.0"
+      "strict_min_version": "42.0",
+      "update_url": "https://github.com/alxgrk/twitter-tracking/blob/master/twitter-tracking-browser-extension/firefox-addon-update.json"
     }
   },
 

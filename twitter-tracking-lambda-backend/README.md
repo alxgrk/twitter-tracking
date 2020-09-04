@@ -1,4 +1,4 @@
-# ktor-lambda-twitter-tracking
+# twitter-tracking-lambda-backend
 The receiving part of Twitter click tracking - done with Ktor, ready for AWS Lambda.
 
 ## Deploy Function
