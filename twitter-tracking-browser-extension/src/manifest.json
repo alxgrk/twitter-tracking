@@ -3,7 +3,7 @@
   "name": "Twitter Tracking Extension",
   "version": "1.0.0",
   "description": "Tracks clicks on twitter.com and collects data for scientific purposes.",
-  "homepage_url": "https://github.com/algxrk/twitter-tracking",
+  "homepage_url": "https://github.com/alxgrk/twitter-tracking",
   "browser_specific_settings": {
     "gecko": {
       "id": "twittertracking@university.de",
