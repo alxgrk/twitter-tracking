@@ -1,0 +1,64 @@
+/* General styling */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-family: sans-serif;
+    font-size: 10px;
+    color: white;
+    background: rgb(87, 174, 61);
+    border: white solid medium;
+    scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    padding: 20px;
+}
+
+h1 {
+    font-size: 2.5rem;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    background: rgb(127, 210, 99);
+    border: gray solid medium;
+}
+
+.row * {
+    margin: 9px 3px;
+}
+
+.row *:first-child {
+    padding: 1px;
+}
+
+.row *:last-child {
+    margin-left: 30px;
+    text-align: right;
+}
+
+.date {
+    margin-bottom: 1px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 10px 0;
+    margin: 10px 0;
+    font-size: 1.2rem;
+}
+
+ul li {
+    padding: 0 5px;
+    overflow-x: auto;
+}
+

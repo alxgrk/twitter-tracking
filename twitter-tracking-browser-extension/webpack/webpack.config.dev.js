@@ -10,29 +10,34 @@ const config = require('./config.js');
 module.exports = _.merge({}, config, {
     mode: "development",
     output: {
-        path: path.resolve(__dirname, '../build/dev'),
+        path: path.resolve(__dirname, '..', 'build', 'dev'),
     },
     devtool: 'source-map',
     plugins: [
         new CleanWebpackPlugin(),
         new CopyWebpackPlugin(
             {
-                patterns: [{
-                    from: './src',
-                    globOptions: {
-                        ignore: ['**/*.js'],
-                    },
-                    transform(content, absoluteFrom) {
-                        console.log(absoluteFrom)
-                        if (absoluteFrom.includes("manifest.json")) {
-                            return content.toString().replace(
-                                "$ACCESS_SITE_PERMISSION",
-                                "*://localhost/*");
-                        } else {
-                            return content
+                patterns: [
+                    {
+                        from: 'src',
+                        globOptions: {
+                            ignore: ['**/*.js'],
+                        },
+                        transform(content, absoluteFrom) {
+                            console.log(absoluteFrom)
+                            if (absoluteFrom.includes("manifest.json")) {
+                                return content.toString().replace(
+                                    "$ACCESS_SITE_PERMISSION",
+                                    "*://localhost/*");
+                            } else {
+                                return content
+                            }
                         }
+                    }, {
+                        from: 'node_modules/webextension-polyfill/dist/browser-polyfill.js',
+                        to: path.resolve(__dirname, '..', 'build', 'dev', 'js')
                     }
-                }]
+                ]
             }),
         new webpack.DefinePlugin({
             API: JSON.stringify("http://localhost:8080/events")

@@ -1,4 +1,5 @@
 import {finder} from "@medv/finder";
+import browser from "webextension-polyfill";
 import sha256 from 'crypto-js/sha256';
 
 const TARGETS = {
@@ -10,6 +11,8 @@ const TARGETS = {
         || /div:nth-child\([0-9]+\)\s>\sdiv\s>\sdiv\s>\sdiv\s>\sdiv:nth-child\(2\)\s>\sdiv\s>\sdiv:nth-child\(2\)\s>\sdiv/.test(selector)
         || /div:nth-child\([0-9]+\)[\s>\sdiv]{7}/.test(selector),
     clickOnMedia: selector => /#tweet-rich-content-label/.test(selector)  // mostly everything
+        || /#card-detail-label/.test(selector)  // links
+        || /#card-media-label/.test(selector)  // links
         || /\[data-testid=card\.layoutLarge\.detail\]/.test(selector) // links
         || /^div:nth-child\(3\).*img$/.test(selector) // links
         || /^div:nth-child\(3\).*\sa\s.*$/.test(selector) // links
@@ -80,6 +83,36 @@ function addListener(type, func) {
     });
 }
 
+function send(event) {
+    fetch(API, {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        body: JSON.stringify(event)
+    })
+        .then(
+            async (response) => {
+                if (response.status >= 200 && response.status <= 299) {
+                    console.log("Result:", await response.text());
+                } else {
+                    throw Error(response.statusText);
+                }
+            },
+            reason => console.error("Error while sending:", JSON.stringify(reason)))
+}
+
+function store(event) {
+    browser.storage.local.get({events: []})
+        .then(async result => {
+            let events = [...result.events, event];
+            await browser.storage.local.set({events})
+        }, err => {
+            console.error("Error while storing:", err)
+        })
+}
+
 function publish(event) {
     if (userId === UNKNOWN_USER_ID)
         userId = hashUserName()
@@ -89,23 +122,11 @@ function publish(event) {
         userId,
         timestamp: new Date().toISOString()
     })
+
     console.log(event)
-    fetch(API, {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        mode: 'cors',
-        body: JSON.stringify(event)
-    })
-        .then(async (response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    console.log("Result:", await response.text());
-                } else {
-                    throw Error(response.statusText);
-                }
-            },
-            (reason) => console.error("Error:", JSON.stringify(reason)))
+
+    store(event)
+    send(event);
 }
 
 function hashUserName() {
@@ -124,4 +145,7 @@ addListener("click", handleEvent)
 addListener("scroll", scrolling)
 window.addEventListener("beforeunload", aboutToUnload)
 
-window.addEventListener("load", _ => publish({action: "session_start"}))
+window.addEventListener("load", async _ => {
+    await browser.storage.local.clear()
+    publish({action: "session_start"})
+})

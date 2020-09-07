@@ -21,21 +21,26 @@ module.exports = _.merge({}, config, {
     plugins: [
         new CleanWebpackPlugin(),
         new CopyWebpackPlugin({
-            patterns: [{
-                from: 'src',
-                globOptions: {
-                    ignore: ['**/*.js'],
-                },
-                transform(content, absoluteFrom) {
-                    if (absoluteFrom.includes("manifest.json")) {
-                        return content.toString().replace(
-                            "$ACCESS_SITE_PERMISSION",
-                            dotenv.parsed.PROD_API_URL);
-                    } else {
-                        return content
+            patterns: [
+                {
+                    from: 'src',
+                    globOptions: {
+                        ignore: ['**/*.js'],
+                    },
+                    transform(content, absoluteFrom) {
+                        if (absoluteFrom.includes("manifest.json")) {
+                            return content.toString().replace(
+                                "$ACCESS_SITE_PERMISSION",
+                                dotenv.parsed.PROD_API_URL);
+                        } else {
+                            return content
+                        }
                     }
+                }, {
+                    from: 'node_modules/webextension-polyfill/dist/browser-polyfill.js',
+                    to: path.resolve(__dirname, '..', 'build', 'prod', 'js')
                 }
-            }]
+            ]
         }),
         new webpack.DefinePlugin({
             'process.env.NODE_ENV': '"production"',
