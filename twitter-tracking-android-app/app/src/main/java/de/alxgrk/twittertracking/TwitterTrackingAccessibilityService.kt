@@ -35,7 +35,13 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
         eventRepository = EventRepository(application.filesDir, Volley.newRequestQueue(this))
 
         if (sessionStore.userId != null)
-            eventRepository.publish(SessionStartEvent(userId()))
+            sessionStarts()
+
+    }
+
+    private fun sessionStarts() {
+        eventRepository.clear()
+        eventRepository.publish(SessionStartEvent(userId()))
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
@@ -110,11 +116,7 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
                         sessionStore.userId =
                             calculateUserIdHash(userName.text?.toString() ?: return@let)
 
-                        eventRepository.publish(
-                            SessionStartEvent(
-                                userId()
-                            )
-                        )
+                        sessionStarts()
                         sessionStore.sessionState = USERNAME_EXTRACTED
 
                         performLeftSwipe()

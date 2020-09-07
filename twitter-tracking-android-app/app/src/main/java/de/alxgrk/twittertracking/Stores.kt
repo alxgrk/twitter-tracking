@@ -49,6 +49,8 @@ class EventRepository(private val filesDir: File, private val requestQueue: Requ
     val localJsonFile =
         File(filesDir, TAG).apply { Log.d(TAG, "Local JsonFile path is '${absolutePath}'") }
 
+    fun clear() = localJsonFile.delete()
+
     suspend fun listAll(): List<Map<String, Any>> =
         withContext(Dispatchers.IO) {
             val file = File(filesDir, TAG)
