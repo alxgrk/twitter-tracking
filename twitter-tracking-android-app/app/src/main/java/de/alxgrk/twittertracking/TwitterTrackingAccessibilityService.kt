@@ -29,14 +29,14 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
     private lateinit var eventRepository: EventRepository
 
     override fun onServiceConnected() {
-        super.onServiceConnected()
+        Log.d(TAG, "Service connected")
+
         val sharedPreferences = applicationContext.getSharedPreferences(TAG, Context.MODE_PRIVATE)
         sessionStore = SessionStore(sharedPreferences)
         eventRepository = EventRepository(application.filesDir, Volley.newRequestQueue(this))
 
         if (sessionStore.userId != null)
             sessionStarts()
-
     }
 
     private fun sessionStarts() {
@@ -45,6 +45,8 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        Log.d(TAG, "About to unbind.")
+
         sessionStore.sessionState = NEW
         eventRepository.publish(SessionEndEvent(userId()))
 

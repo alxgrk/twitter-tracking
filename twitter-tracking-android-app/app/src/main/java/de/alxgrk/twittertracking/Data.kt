@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import de.alxgrk.twittertracking.ViewIds.*
 import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 val OBJECT_MAPPER = ObjectMapper().apply {
     disable(SerializationFeature.INDENT_OUTPUT)
@@ -16,7 +18,8 @@ sealed class Event(
     val action: String,
     val userId: String,
     val eventType: String = "ANDROID",
-    val timestamp: String = LocalDateTime.now().toString()
+    val timestamp: String = LocalDateTime.now(ZoneOffset.UTC)
+        .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 ) {
     override fun toString(): String = OBJECT_MAPPER.writeValueAsString(this)
 

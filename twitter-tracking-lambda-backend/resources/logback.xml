@@ -7,6 +7,9 @@
     <root level="trace">
         <appender-ref ref="STDOUT"/>
     </root>
+    <logger name="de.alxgrk" level="DEBUG"/>
+    <logger name="io.ktor" level="DEBUG"/>
+    <logger name="org.elasticsearch" level="DEBUG"/>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
     <logger name="software.amazon.awssdk.auth" level="INFO"/>

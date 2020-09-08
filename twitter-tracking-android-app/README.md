@@ -15,11 +15,12 @@ If you want to build the release APK, make sure to do the following:
 ## How to connect to the server locally
 
 If you are running the server on your computer, you need to do the following to connect you phone to it:
- - connect your phone via USB
- - run `adb tcpip 5555`
- - run `export DEVICE_PORT=$(adb shell ifconfig | grep -A1 wlan0 | grep -oP '\d+\.\d+\.\d+\.\d+(?=\s+Bcast)')`
+ - only neccessary on first connect
+   - connect your phone via USB
+   - run `adb tcpip 5555`
+   - run `export DEVICE_PORT=$(adb shell ifconfig | grep -A1 wlan0 | grep -oP '\d+\.\d+\.\d+\.\d+(?=\s+Bcast)')`
+   - disconnect USB cable
  - run `adb connect $DEVICE_PORT`
- - disconnect USB cable
  - check if your computer's IP matches the one in [build.gradle's build config](./build.gradle) and in [network security config](./app/src/main/res/xml/network_security_config.xml) 
     - find your own ip e.g. by running `ifconfig | grep -A1 wlp3s0 | grep -oP '\d+\.\d+\.\d+\.\d+(?=\s+netmask)'`
- - optional: open port temporarily by running `sudo iptables -A INPUT -p tcp -s $DEVICE_PORT -dport 8080 -j ACCEPT`
+ - optional: open port temporarily by running `sudo iptables -A INPUT -p tcp -s $DEVICE_PORT --dport 8080 -j ACCEPT`
