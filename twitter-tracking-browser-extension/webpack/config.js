@@ -6,7 +6,7 @@ module.exports = {
     "tracked-events": './src/popup/tracked-events'
   },
   output: {
-    filename: './js/[name].js'
+    filename: (pathData) => pathData.chunk.name !== 'main' ? './popup/[name].js' : './js/[name].js'
   },
   module: {
     rules: [

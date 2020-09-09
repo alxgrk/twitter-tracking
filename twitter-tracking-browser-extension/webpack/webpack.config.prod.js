@@ -8,10 +8,11 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 const config = require('./config.js');
 
+let distRoot = path.resolve(__dirname, '..', 'build', 'prod');
 module.exports = _.merge({}, config, {
     mode: "production",
     output: {
-        path: path.resolve(__dirname, '..', 'build', 'prod'),
+        path: distRoot,
     },
     optimization: {
         minimize: true,
@@ -29,16 +30,16 @@ module.exports = _.merge({}, config, {
                     },
                     transform(content, absoluteFrom) {
                         if (absoluteFrom.includes("manifest.json")) {
-                            return content.toString().replace(
-                                "$ACCESS_SITE_PERMISSION",
-                                dotenv.parsed.PROD_API_URL);
+                            return content.toString()
+                                .replace("$VERSION", process.env.npm_package_version)
+                                .replace("$ACCESS_SITE_PERMISSION", dotenv.parsed.PROD_API_URL);
                         } else {
                             return content
                         }
                     }
                 }, {
                     from: 'node_modules/webextension-polyfill/dist/browser-polyfill.js',
-                    to: path.resolve(__dirname, '..', 'build', 'prod', 'js')
+                    to: path.resolve(distRoot, 'js')
                 }
             ]
         }),

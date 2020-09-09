@@ -6,11 +6,11 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 const config = require('./config.js');
 
-
+let distRoot = path.resolve(__dirname, '..', 'build', 'dev');
 module.exports = _.merge({}, config, {
     mode: "development",
     output: {
-        path: path.resolve(__dirname, '..', 'build', 'dev'),
+        path: distRoot,
     },
     devtool: 'source-map',
     plugins: [
@@ -26,16 +26,16 @@ module.exports = _.merge({}, config, {
                         transform(content, absoluteFrom) {
                             console.log(absoluteFrom)
                             if (absoluteFrom.includes("manifest.json")) {
-                                return content.toString().replace(
-                                    "$ACCESS_SITE_PERMISSION",
-                                    "*://localhost/*");
+                                return content.toString()
+                                    .replace("$VERSION", process.env.npm_package_version)
+                                    .replace("$ACCESS_SITE_PERMISSION", "*://localhost/*");
                             } else {
                                 return content
                             }
                         }
                     }, {
                         from: 'node_modules/webextension-polyfill/dist/browser-polyfill.js',
-                        to: path.resolve(__dirname, '..', 'build', 'dev', 'js')
+                        to: path.resolve(distRoot, 'js')
                     }
                 ]
             }),
