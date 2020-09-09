@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
     }
 
+    @Suppress("DEPRECATION")
     private fun createFileObserver(eventRepository: EventRepository): FileObserver {
         return object :
             FileObserver(eventRepository.localJsonFile.absolutePath, MODIFY) {
