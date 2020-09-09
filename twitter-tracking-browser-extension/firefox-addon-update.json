@@ -5,8 +5,12 @@
         {
           "version": "1.0.0",
           "update_link": "https://github.com/alxgrk/twitter-tracking/releases/download/1.0.0/firefox-extension.xpi"
+        },
+        {
+          "version": "1.0.1",
+          "update_link": "https://github.com/alxgrk/twitter-tracking/releases/download/1.0.1/firefox-extension.xpi"
         }
-      ]
+     ]
     }
   }
 }
