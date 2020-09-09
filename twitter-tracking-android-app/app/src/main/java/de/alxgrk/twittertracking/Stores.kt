@@ -1,7 +1,6 @@
 package de.alxgrk.twittertracking
 
 import android.content.SharedPreferences
-import android.util.Log
 import com.android.volley.Request.Method.POST
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.StringRequest
@@ -12,6 +11,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class SessionStore(private val sharedPreferences: SharedPreferences) {
+
+    companion object {
+        const val SHARED_PREF_TAG = "TwitterTrackingAccessibilityService"
+        const val DEFAULT_USER_ID = "unknown_user"
+    }
+
+    val userIdOrDefault: String
+    get() = userId ?: DEFAULT_USER_ID
 
     var userId: String?
         get() = sharedPreferences.getString("userId", null)
@@ -51,7 +58,7 @@ class SessionStore(private val sharedPreferences: SharedPreferences) {
 class EventRepository(private val filesDir: File, private val requestQueue: RequestQueue?) {
 
     val localJsonFile =
-        File(filesDir, TAG).apply { Log.d(TAG, "Local JsonFile path is '${absolutePath}'") }
+        File(filesDir, TAG).apply { Logger.d("Local JsonFile path is '${absolutePath}'") }
 
     fun clear() = localJsonFile.delete()
 
@@ -61,7 +68,7 @@ class EventRepository(private val filesDir: File, private val requestQueue: Requ
             if (file.exists())
                 file.useLines { seq ->
                     seq.mapIndexed { index, it ->
-                        Log.d(TAG, "Line ${index + 1}: $it")
+                        Logger.d("Line ${index + 1}: $it")
                         OBJECT_MAPPER.readValue(it, object : TypeReference<Map<String, Any>>() {})
                     }.toList().asReversed()
                 }
@@ -72,7 +79,7 @@ class EventRepository(private val filesDir: File, private val requestQueue: Requ
     fun publish(event: Event) {
         val eventAsString = OBJECT_MAPPER.writeValueAsString(event)
 
-        Log.i(TAG, "Publishing event $eventAsString")
+        Logger.i("Publishing event $eventAsString")
 
         writeToFile(eventAsString)
         emitToServer(eventAsString)
@@ -85,11 +92,11 @@ class EventRepository(private val filesDir: File, private val requestQueue: Requ
     private fun emitToServer(eventAsString: String) {
         val request = object : StringRequest(POST, API_URL,
             {
-                Log.d(TAG, "Request acknowledged.")
+                Logger.d("Request acknowledged.")
             },
             { error ->
-                Log.e(TAG, "Request failed: \"${error.message}\" (${error.cause})")
-                Log.d(TAG, "Response was: ${error.networkResponse?.statusCode} - ${error.networkResponse?.data?.let { String(it) }}")
+                Logger.e("Request failed: \"${error.message}\" (${error.cause})")
+                Logger.d("Response was: ${error.networkResponse?.statusCode} - ${error.networkResponse?.data?.let { String(it) }}")
             }) {
 
             override fun getBodyContentType() = "application/json; charset=utf-8"

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.FileObserver
 import android.provider.Settings
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -60,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch {
             val currentEvents = eventRepository.listAll()
             refreshEvents(currentEvents)
-            Log.i(TAG, "Number of stored events: ${currentEvents.size}")
+            Logger.i("Number of stored events: ${currentEvents.size}")
         }
 
         recyclerView = findViewById<RecyclerView>(R.id.rv_click_activity).apply {
@@ -106,7 +105,7 @@ class MainActivity : AppCompatActivity() {
         return object :
             FileObserver(eventRepository.localJsonFile.absolutePath, MODIFY) {
             override fun onEvent(event: Int, path: String?) {
-                Log.d(TAG, "Event repository was updated.")
+                Logger.d("Event repository was updated.")
                 GlobalScope.launch {
                     val newEvents = eventRepository.listAll()
                         .filter { new ->
@@ -165,8 +164,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-
-        val TAG = MainActivity::class.java.simpleName
 
         fun Context.isAccessibilityServiceOn(): Boolean {
             val am = (getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager?)

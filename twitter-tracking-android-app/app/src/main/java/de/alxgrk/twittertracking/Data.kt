@@ -99,10 +99,16 @@ enum class ViewIds(private val prefixStrippedViewId: String?) {
 
     override fun toString() = prefixStrippedViewId ?: "UNKNOWN"
 
-    fun withPrefix() = "${TwitterTrackingAccessibilityService.VIEW_ID_PREFIX}${toString()}"
+    fun withPrefix() = "$VIEW_ID_PREFIX${toString()}"
 
     companion object {
-        fun String.toViewId() =
+
+        internal const val VIEW_ID_PREFIX = "com.twitter.android:id/"
+
+        internal fun CharSequence?.stripPrefix(): ViewIds? =
+            this?.split(VIEW_ID_PREFIX)?.last()?.toViewId()
+
+        private fun String.toViewId() =
             values().firstOrNull { it.prefixStrippedViewId == this } ?: UNKNOWN_ID
     }
 }
