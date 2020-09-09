@@ -42,6 +42,10 @@ class SessionStore(private val sharedPreferences: SharedPreferences) {
     var searchTextEnteredManually: String?
         get() = sharedPreferences.getString("searchTextEnteredManually", null)
         set(value) = sharedPreferences.edit().putString("searchTextEnteredManually", value).apply()
+
+    var twitterWasOpened
+        get() = sharedPreferences.getBoolean("twitterWasOpened", false)
+        set(value) = sharedPreferences.edit().putBoolean("twitterWasOpened", value).apply()
 }
 
 class EventRepository(private val filesDir: File, private val requestQueue: RequestQueue?) {

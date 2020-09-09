@@ -3,6 +3,7 @@ package de.alxgrk.twittertracking
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.accessibilityservice.GestureDescription.StrokeDescription
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Path
@@ -13,7 +14,6 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.RequiresApi
 import com.android.volley.toolbox.Volley
 import de.alxgrk.twittertracking.ActivitiesOfInterest.*
-import de.alxgrk.twittertracking.BuildConfig.API_URL
 import de.alxgrk.twittertracking.Event.*
 import de.alxgrk.twittertracking.Event.ClickEvent.*
 import de.alxgrk.twittertracking.SessionState.*
@@ -31,12 +31,20 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         Log.d(TAG, "Service connected")
 
-        val sharedPreferences = applicationContext.getSharedPreferences(TAG, Context.MODE_PRIVATE)
+        start()
+
+        registerScreenOffReceiver()
+    }
+
+    private fun start() {
+        val sharedPreferences = applicationContext.getSharedPreferences(TAG, MODE_PRIVATE)
         sessionStore = SessionStore(sharedPreferences)
         eventRepository = EventRepository(application.filesDir, Volley.newRequestQueue(this))
 
         if (sessionStore.userId != null)
             sessionStarts()
+
+        sessionStore.twitterWasOpened = true
     }
 
     private fun sessionStarts() {
@@ -47,13 +55,21 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         Log.d(TAG, "About to unbind.")
 
-        sessionStore.sessionState = NEW
+        end()
+
+        unregisterScreenOffReceiver()
+
+        return super.onUnbind(intent)
+    }
+
+    private fun end() {
         eventRepository.publish(SessionEndEvent(userId()))
 
+        sessionStore.twitterWasOpened = false
+        sessionStore.sessionState = NEW
         sessionStore.lastScrollY = 0
         sessionStore.searchTextEnteredManually = null
         sessionStore.currentActivity = UNKNOWN_ACTIVITY
-        return super.onUnbind(intent)
     }
 
     override fun onInterrupt() {
@@ -64,8 +80,14 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
         val nodeInfo = event?.source ?: rootInActiveWindow ?: return
         nodeInfo.refresh()
 
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        Log.d(TAG, activityManager.runningAppProcesses.toString())
+
         if (sessionStore.userId == null)
             stepWiseUserNameExtraction(nodeInfo)
+
+        if (!sessionStore.twitterWasOpened)
+            start()
 
         when (event?.eventType) {
 
@@ -282,7 +304,7 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
     }
 
     private fun logTree(nodeInfo: AccessibilityNodeInfo, stage: Int = 0) {
-        if (API_URL.contains("10.0.2.2"))
+        if (!BuildConfig.DEBUG)
             return
 
         if (stage == 0)
@@ -315,7 +337,7 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
 
     companion object {
 
-        private val TAG = TwitterTrackingAccessibilityService::class.java.simpleName
+        internal val TAG = TwitterTrackingAccessibilityService::class.java.simpleName
         internal const val VIEW_ID_PREFIX = "com.twitter.android:id/"
         internal fun CharSequence?.stripPrefix(): ViewIds? =
             this?.split(VIEW_ID_PREFIX)?.last()?.toViewId()
