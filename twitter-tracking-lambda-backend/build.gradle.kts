@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "de.alxgrk"
-version = "1.0.1"
+version = "1.0.2"
 
 application {
     mainClassName = "io.ktor.server.netty.EngineMain"

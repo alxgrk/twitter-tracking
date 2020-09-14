@@ -1,6 +1,6 @@
 {
   "name": "twitter-tracking-browser-extension",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A browser extension that captures Twitter clicks - for scientific reasons.",
   "scripts": {
     "build": "mkdir -p ./build/prod && webpack --config ./webpack/webpack.config.prod.js",
