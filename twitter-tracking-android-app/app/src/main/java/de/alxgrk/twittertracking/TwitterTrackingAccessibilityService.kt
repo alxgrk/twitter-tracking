@@ -41,9 +41,6 @@ class TwitterTrackingAccessibilityService : AccessibilityService() {
         val nodeInfo = (event ?: return).source ?: rootInActiveWindow ?: return
         nodeInfo.refresh()
 
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        Logger.d(activityManager.runningAppProcesses.toString())
-
         if (trackingLifecycleManager.sessionStore.userId == null) {
             val newState = trackingLifecycleManager.usernameExtractor.extractStepwise(nodeInfo)
             if (newState == SessionState.USERNAME_EXTRACTED) {

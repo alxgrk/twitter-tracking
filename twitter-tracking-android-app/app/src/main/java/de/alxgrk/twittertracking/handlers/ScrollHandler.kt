@@ -19,18 +19,27 @@ class ScrollHandler(
 
     override fun handle(accessibilityEvent: AccessibilityEvent, nodeInfo: AccessibilityNodeInfo) {
         val scrollPosition = accessibilityEvent.getAlreadyScrolled()
-        if (scrollPosition != null
-            && sessionStore.currentActivity == ActivitiesOfInterest.MAIN
-            && scrollEventCount++ % 5 == 0
-            && scrollPosition > 2
-        )
-            eventRepository.publish(
-                Event.ScrollEvent(
-                    sessionStore.userIdOrDefault,
-                    scrollPosition,
-                    Math.floorDiv(scrollPosition, 1000)
+        if (sessionStore.currentActivity == ActivitiesOfInterest.MAIN && scrollEventCount++ % 5 == 0) {
+            if (scrollPosition == null && scrollEventCount % 10 == 0) {
+                // roughly, every 10th scroll is a tweet
+                eventRepository.publish(
+                    Event.ScrollEvent(
+                        sessionStore.userIdOrDefault,
+                        -1,
+                        scrollEventCount % 10
+                    )
                 )
-            )
+            }
+            if (scrollPosition != null && scrollPosition > 2) {
+                eventRepository.publish(
+                    Event.ScrollEvent(
+                        sessionStore.userIdOrDefault,
+                        scrollPosition,
+                        Math.floorDiv(scrollPosition, 1000)
+                    )
+                )
+            }
+        }
     }
 
     private fun AccessibilityEvent?.getAlreadyScrolled(): Int? =
@@ -45,7 +54,8 @@ class ScrollHandler(
         this?.scrollDeltaY?.absoluteValue?.plus(sessionStore.lastScrollY)
             ?.also { sessionStore.lastScrollY = it }
 
-    private fun AccessibilityEvent?.getAlreadyScrolledDeltaOAndLower(): Int? =
-        this?.scrollY?.absoluteValue?.also { sessionStore.lastScrollY = it }
+    // for some reason, scrollY is always -1 on Oreo
+    private fun AccessibilityEvent?.getAlreadyScrolledDeltaOAndLower(): Int? = null
+    // this?.scrollY?.absoluteValue?.also { sessionStore.lastScrollY = it }
 
 }
