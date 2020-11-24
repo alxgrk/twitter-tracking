@@ -7,8 +7,10 @@ import kscience.plotly.Plot
 import kscience.plotly.Plotly
 import kscience.plotly.layout
 import kscience.plotly.models.AxisType
-import kscience.plotly.models.Bar
 import kscience.plotly.models.BarMode
+import kscience.plotly.models.Box
+import kscience.plotly.models.BoxMean
+import kscience.plotly.models.BoxPoints
 
 class InteractionDistributionPerTweetPlot : Chart {
 
@@ -17,6 +19,7 @@ class InteractionDistributionPerTweetPlot : Chart {
     }
 
     override fun Analyse.createPlot(sessionsPerUserId: Map<UserId, List<Session>>): Plot {
+
         val interactionsWithTweetsPerUser = sessionsPerUserId
             .map { (userId, sessions) ->
                 val numberOfTweetsPerUser = sessions
@@ -36,76 +39,38 @@ class InteractionDistributionPerTweetPlot : Chart {
             }
             .toMap()
 
-        val bars = interactionsWithTweetsPerUser.entries.mapIndexed { i, (userId, interactions) ->
-            Bar {
-                x.set(
-                    listOf(
-                        "likes / session",
-                        "retweets / session",
-                        "clicksOnMedia / session",
-                        "clicksOnHashtag / session",
-                        "openDetailsViews / session",
-                        "visitAuthorsProfiles / session"
-                    )
-                )
-                y.set(
-                    listOf(
-                        interactions.likesPerSession,
-                        interactions.retweetsPerSession,
-                        interactions.mediaClicksPerSession,
-                        interactions.hashtagClicksPerSession,
-                        interactions.detailViewsPerSession,
-                        interactions.authorProfileClicksPerSession,
-                    )
-                )
-                name = userId.id.substring(0, 8)
-                marker {
-                    color(i.toRandomColor())
+        val boxes =
+            listOf(
+                "likes" to Interactions::likesPerSession,
+                "retweets" to Interactions::retweetsPerSession,
+                "clicksOnMedia" to Interactions::mediaClicksPerSession,
+                "clicksOnHashtag" to Interactions::hashtagClicksPerSession,
+                "openDetailsViews" to Interactions::detailViewsPerSession,
+                "visitAuthorsProfiles" to Interactions::authorProfileClicksPerSession
+            )
+                .mapIndexed { i, (label, prop) ->
+                    Box {
+                        y.set(interactionsWithTweetsPerUser.values.map { prop(it) * 100.0 }.filter { it > 0.0 })
+                        name = label
+                        marker {
+                            color(i.toRandomColor())
+                        }
+                        boxpoints = BoxPoints.outliers
+                        boxmean = BoxMean.sd
+                    }
                 }
-            }
-        }
-
-        fun averageOf(prop: (Interactions) -> Double) =
-            interactionsWithTweetsPerUser.values.map { prop(it) }.filter { it > 0 }.average()
-
-        val averageBar = Bar {
-            x.set(
-                listOf(
-                    "likes / session",
-                    "retweets / session",
-                    "clicksOnMedia / session",
-                    "clicksOnHashtag / session",
-                    "openDetailsViews / session",
-                    "visitAuthorsProfiles / session"
-                )
-            )
-            y.set(
-                listOf(
-                    averageOf { it.likesPerSession },
-                    averageOf { it.retweetsPerSession },
-                    averageOf { it.mediaClicksPerSession },
-                    averageOf { it.hashtagClicksPerSession },
-                    averageOf { it.detailViewsPerSession },
-                    averageOf { it.authorProfileClicksPerSession }
-                )
-            )
-            name = "Average over all Users"
-            marker {
-                color("rgb(129, 24, 75)")
-            }
-        }
 
         return Plotly.plot {
-            traces(averageBar, *bars.toTypedArray())
+            traces(boxes)
 
             layout {
-                title = "Interactions per Tweet by Interaction Type"
+                title = "Tweet Interaction Probability by Interaction Type"
                 height = 800
                 xaxis {
                     title = "Interaction Types"
                 }
                 yaxis {
-                    title = "Interactions per Tweet"
+                    title = "Interaction Probability in %"
                     type = AxisType.log
                     autorange = true
                 }
@@ -115,10 +80,6 @@ class InteractionDistributionPerTweetPlot : Chart {
                     bgcolor("rgba(255, 255, 255, 0)")
                     bordercolor("rgba(255, 255, 255, 0)")
                 }
-
-                barmode = BarMode.group
-                bargap = 0.15
-                bargroupgap = 0.1
             }
         }
     }

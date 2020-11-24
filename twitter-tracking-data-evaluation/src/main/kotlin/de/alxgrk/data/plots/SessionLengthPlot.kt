@@ -16,14 +16,15 @@ class SessionLengthPlot : Chart {
 
         val sessionLengths = mutableListOf<Long>()
 
-        val boxes = sessionsPerUserId.entries.mapIndexed { i, (userId, sessions) ->
+        val boxes = sessionsPerUserId.entries.mapIndexed { i, (_, sessions) ->
             val sessionLengthsPerUser = sessions
                 .map { session -> session.durationInSeconds() }
                 .filter { it < 86400 } // eliminate sessions, that last longer than one day
+                .filter { it > 0 }
             sessionLengths.addAll(sessionLengthsPerUser)
             Box {
                 y.set(sessionLengthsPerUser)
-                name = userId.id.substring(0, 8)
+                name = "U${i + 1}"
                 marker {
                     color(i.toRandomColor())
                 }
@@ -47,13 +48,13 @@ class SessionLengthPlot : Chart {
                 title = "Session Lengths per User (cut off at 1 day)"
                 xaxis {
                     title = "Users"
-                    tickangle = -45
                 }
                 yaxis {
-                    title = "Logarithmic Session Length in Seconds"
+                    title = "Session Length in Seconds"
                     type = AxisType.log
                     autorange = true
                 }
+                showlegend = false
             }
         }
     }

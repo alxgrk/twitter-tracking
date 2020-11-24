@@ -46,16 +46,16 @@ class SessionTypeDistributionPlot : Chart {
             Bar {
                 x.set(
                     listOf(
-                        "Posting Session Frequency",
-                        "Follow Session Frequency",
-                        "Scrolling Session Frequency"
+                        "Posting Session",
+                        "Follow Session",
+                        "Scrolling Session"
                     )
                 )
                 y.set(
                     listOf(
-                        sessionTypesFreq[POSTING] ?: 0.0,
-                        sessionTypesFreq[FOLLOW] ?: 0.0,
-                        sessionTypesFreq[SCROLLING] ?: 0.0
+                        sessionTypesFreq[POSTING]?.times(100.0) ?: 0.0,
+                        sessionTypesFreq[FOLLOW]?.times(100.0) ?: 0.0,
+                        sessionTypesFreq[SCROLLING]?.times(100.0) ?: 0.0
                     )
                 )
                 name = userId.id.substring(0, 8)
@@ -71,16 +71,16 @@ class SessionTypeDistributionPlot : Chart {
         val averageBar = Bar {
             x.set(
                 listOf(
-                    "Posting Session Frequency",
-                    "Follow Session Frequency",
-                    "Scrolling Session Frequency"
+                    "Posting Session",
+                    "Follow Session",
+                    "Scrolling Session"
                 )
             )
             y.set(
                 listOf(
-                    averageOf(POSTING),
-                    averageOf(FOLLOW),
-                    averageOf(SCROLLING)
+                    averageOf(POSTING) * 100.0,
+                    averageOf(FOLLOW) * 100.0,
+                    averageOf(SCROLLING) * 100.0
                 )
             )
             name = "Average over all Users"
@@ -93,20 +93,15 @@ class SessionTypeDistributionPlot : Chart {
             traces(averageBar, *bars.toTypedArray())
 
             layout {
-                title = "Frequency of Session Types"
+                title = "Probability of Session Types"
                 xaxis {
                     title = "Session Types"
                 }
                 yaxis {
-                    title = "Frequency per Session Type"
+                    title = "Session Type Probability in %"
                     type = AxisType.log
                 }
-                legend {
-                    x = 0
-                    y = 1.0
-                    bgcolor("rgba(255, 255, 255, 0)")
-                    bordercolor("rgba(255, 255, 255, 0)")
-                }
+                showlegend = false
 
                 barmode = BarMode.group
                 bargap = 0.15
@@ -114,4 +109,61 @@ class SessionTypeDistributionPlot : Chart {
             }
         }
     }
+
+    /*
+    enum class SessionType {
+        Posting,
+        Follow,
+        Scrolling
+    }
+
+    override fun Analyse.createPlot(sessionsPerUserId: Map<UserId, List<Session>>): Plot {
+
+        val sessionTypesPerUser = sessionsPerUserId
+            .map { (userId, sessions) ->
+                userId to sessions
+                    .flatMap { session ->
+                        val sessionTypes = mutableListOf<SessionType>()
+                        if (session.sessionEventsInChronologicalOrder.any { it.target == "posting" })
+                            sessionTypes.add(Posting)
+                        if (session.sessionEventsInChronologicalOrder.any { it.target == "followByTweet" || it.target == "follow" })
+                            sessionTypes.add(Follow)
+                        if (session.sessionEventsInChronologicalOrder.none { it.target == "posting" || it.target == "followByTweet" || it.target == "follow" })
+                            sessionTypes.add(Scrolling)
+                        sessionTypes
+                    }
+                    .groupingBy { it }
+                    .eachCount()
+                    .mapValues { it.value / sessions.size.toDouble() }
+            }
+            .toMap()
+
+        val boxes = listOf(Posting, Follow).mapIndexed { i, sessionType ->
+            Box {
+                y.set(sessionTypesPerUser.values.mapNotNull { it[sessionType]?.times(100.0) })
+                name = "$sessionType Session"
+                marker {
+                    color(((i * 4)).toRandomColor())
+                }
+                boxpoints = BoxPoints.outliers
+                boxmean = BoxMean.sd
+            }
+        }
+
+        return Plotly.plot {
+            traces(boxes)
+
+            layout {
+                title = "Probability of Session Types"
+                xaxis {
+                    title = "Session Types"
+                }
+                yaxis {
+                    title = "Session Type Probability in %"
+                }
+                showlegend = false
+            }
+        }
+    }
+     */
 }
