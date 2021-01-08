@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.toCollection
 import org.elasticsearch.index.query.QueryBuilders.termQuery
 import org.elasticsearch.search.builder.SearchSourceBuilder.searchSource
 import org.elasticsearch.search.sort.SortBuilders.fieldSort
+import java.time.temporal.ChronoUnit
 
 class Sessions(private val repo: AsyncIndexRepository<Event>) {
 
@@ -40,8 +41,30 @@ class Sessions(private val repo: AsyncIndexRepository<Event>) {
                         }
                     }
                     "session_end" -> {
-                        lastEndEvent = event
-                        null
+                        val latest = sessionEvents.lastOrNull() ?: lastStartEvent ?: return@mapNotNull null
+
+                        // only consider event as part of session, if there was no break longer than 1 hour
+                        if (ChronoUnit.HOURS.between(
+                                latest.zonedTimestamp(),
+                                event.zonedTimestamp()
+                            ) < 1
+                        ) {
+                            lastEndEvent = event
+                            null
+                        } else {
+                            debug("WARN: creating new session with event of action '${event.action}' because timeframe between latest and current event is too large")
+
+                            tryToCreateSession(
+                                lastStartEvent,
+                                latest,
+                                sessionEvents,
+                                ignoredEvents
+                            ).also {
+                                lastStartEvent = event
+                                lastEndEvent = event
+                                sessionEvents = mutableListOf()
+                            }
+                        }
                     }
                     else -> {
                         if (lastStartEvent != null && lastEndEvent != null) {
@@ -59,8 +82,31 @@ class Sessions(private val repo: AsyncIndexRepository<Event>) {
                                 sessionEvents.add(event)
                             }
                         } else {
-                            sessionEvents.add(event)
-                            null
+                            val latest = sessionEvents.lastOrNull() ?: lastStartEvent ?: return@mapNotNull null
+
+                            // only consider event as part of session, if there was no break longer than 1 hour
+                            if (ChronoUnit.HOURS.between(
+                                    latest.zonedTimestamp(),
+                                    event.zonedTimestamp()
+                                ) < 1
+                            ) {
+                                sessionEvents.add(event)
+                                null
+                            } else {
+                                debug("WARN: creating new session with event of action '${event.action}' because timeframe between latest and current event is too large")
+
+                                tryToCreateSession(
+                                    lastStartEvent,
+                                    latest,
+                                    sessionEvents,
+                                    ignoredEvents
+                                ).also {
+                                    lastStartEvent = event
+                                    lastEndEvent = null
+                                    sessionEvents = mutableListOf()
+                                    sessionEvents.add(event)
+                                }
+                            }
                         }
                     }
                 }
@@ -84,7 +130,7 @@ class Sessions(private val repo: AsyncIndexRepository<Event>) {
         ignoredEvents: MutableList<Event>
     ): Session? {
         if (lastStartEvent != null) {
-            if (lastEndEvent == null) {
+            if (lastEndEvent == null || lastStartEvent == lastEndEvent) {
                 debug("WARN: received another session_start event without having an session_end event - starting new session nonetheless")
                 sessionEvents.lastOrNull()
                     ?.also {

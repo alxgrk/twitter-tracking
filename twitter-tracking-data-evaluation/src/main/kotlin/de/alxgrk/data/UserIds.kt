@@ -32,4 +32,6 @@ class UserIds(private val repo: AsyncIndexRepository<Event>) {
         .map { UserId(it.keyAsString) }
 }
 
-class UserId @JsonCreator constructor(@JsonProperty("id") val id: String)
+class UserId @JsonCreator constructor(@JsonProperty("id") val id: String) {
+    override fun toString() = id
+}

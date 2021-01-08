@@ -9,6 +9,7 @@ import kscience.plotly.layout
 import kscience.plotly.models.AxisType
 import kscience.plotly.models.Box
 import kscience.plotly.models.BoxPoints
+import kscience.plotly.models.TextPosition
 
 class SessionLengthPlot : Chart {
 
@@ -19,7 +20,6 @@ class SessionLengthPlot : Chart {
         val boxes = sessionsPerUserId.entries.mapIndexed { i, (_, sessions) ->
             val sessionLengthsPerUser = sessions
                 .map { session -> session.durationInSeconds() }
-                .filter { it < 86400 } // eliminate sessions, that last longer than one day
                 .filter { it > 0 }
             sessionLengths.addAll(sessionLengthsPerUser)
             Box {
@@ -45,7 +45,7 @@ class SessionLengthPlot : Chart {
             traces(sessionLengthsOfAllUsers, *boxes.toTypedArray())
 
             layout {
-                title = "Session Lengths per User (cut off at 1 day)"
+                title = "Session Lengths per User"
                 xaxis {
                     title = "Users"
                 }

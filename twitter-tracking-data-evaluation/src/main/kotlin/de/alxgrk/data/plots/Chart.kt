@@ -13,10 +13,7 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.utility.DockerImageName
 import java.io.File
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.time.temporal.Temporal
 import kotlin.math.absoluteValue
 import kotlin.random.Random
 import kotlin.reflect.full.createInstance
@@ -57,20 +54,14 @@ interface Chart {
     fun Analyse.createPlot(sessionsPerUserId: Map<UserId, List<Session>>): Plot
 
     fun Session.durationInSeconds(): Long = ChronoUnit.SECONDS.between(
-        sessionStartEvent.timestamp.zonedOrLocal(),
-        sessionEndEvent.timestamp.zonedOrLocal()
+        sessionStartEvent.zonedTimestamp(),
+        sessionEndEvent.zonedTimestamp()
     )
 
     fun Event.durationInMilliseconds(other: Event): Long = ChronoUnit.MILLIS.between(
-        this.timestamp.zonedOrLocal(),
-        other.timestamp.zonedOrLocal()
+        this.zonedTimestamp(),
+        other.zonedTimestamp()
     ).absoluteValue
-
-    fun String.zonedOrLocal(): Temporal =
-        if (this.endsWith("Z", ignoreCase = false))
-            ZonedDateTime.parse(this)
-        else
-            LocalDateTime.parse(this)
 
     fun Int.toRandomColor(): String {
         val color =

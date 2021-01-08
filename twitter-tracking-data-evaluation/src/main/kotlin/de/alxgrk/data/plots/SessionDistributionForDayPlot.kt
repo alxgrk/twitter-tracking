@@ -18,7 +18,7 @@ class SessionDistributionForDayPlot : Chart {
             .mapValues { sessions ->
                 sessions.value
                     .groupBy {
-                        val zonedOrLocal = it.sessionStartEvent.timestamp.zonedOrLocal()
+                        val zonedOrLocal = it.sessionStartEvent.zonedTimestamp()
                         val hour = zonedOrLocal.get(ChronoField.HOUR_OF_DAY).toString().padStart(2, '0')
                         val halfOrFull = if (zonedOrLocal.get(ChronoField.MINUTE_OF_HOUR) < 30) "00" else "30"
                         hour to halfOrFull

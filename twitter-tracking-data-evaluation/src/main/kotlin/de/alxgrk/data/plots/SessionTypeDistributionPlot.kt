@@ -12,6 +12,7 @@ import kscience.plotly.layout
 import kscience.plotly.models.AxisType
 import kscience.plotly.models.Bar
 import kscience.plotly.models.BarMode
+import kscience.plotly.models.TextPosition
 
 class SessionTypeDistributionPlot : Chart {
 
@@ -51,14 +52,17 @@ class SessionTypeDistributionPlot : Chart {
                         "Scrolling Session"
                     )
                 )
+                val freqs = listOf(
+                    sessionTypesFreq[POSTING]?.times(100.0) ?: 0.0,
+                    sessionTypesFreq[FOLLOW]?.times(100.0) ?: 0.0,
+                    sessionTypesFreq[SCROLLING]?.times(100.0) ?: 0.0
+                )
                 y.set(
-                    listOf(
-                        sessionTypesFreq[POSTING]?.times(100.0) ?: 0.0,
-                        sessionTypesFreq[FOLLOW]?.times(100.0) ?: 0.0,
-                        sessionTypesFreq[SCROLLING]?.times(100.0) ?: 0.0
-                    )
+                    freqs
                 )
                 name = userId.id.substring(0, 8)
+                // textsList = freqs.map { "%.3f".format(it)}
+                // textposition = TextPosition.auto
                 marker {
                     color(i.toRandomColor())
                 }
@@ -76,14 +80,17 @@ class SessionTypeDistributionPlot : Chart {
                     "Scrolling Session"
                 )
             )
+            val freqs = listOf(
+                averageOf(POSTING) * 100.0,
+                averageOf(FOLLOW) * 100.0,
+                averageOf(SCROLLING) * 100.0
+            )
             y.set(
-                listOf(
-                    averageOf(POSTING) * 100.0,
-                    averageOf(FOLLOW) * 100.0,
-                    averageOf(SCROLLING) * 100.0
-                )
+                freqs
             )
             name = "Average over all Users"
+            // textsList = freqs.map { "%.3f".format(it)}
+            // textposition = TextPosition.auto
             marker {
                 color("rgb(129, 24, 75)")
             }

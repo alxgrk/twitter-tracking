@@ -46,53 +46,58 @@ class Analyse : CliktCommand() {
         .choice("all", *findChartNames().toTypedArray())
 
     override fun run() = runBlocking {
-        val repo = initialize(host)
+        try {
+            val repo = initialize(host)
 
-        val sessionsPerUserId = (
-            if (refresh || !Cache.exists())
-                coroutineScope {
+            val sessionsPerUserId = (
+                if (refresh || !Cache.exists())
+                    coroutineScope {
 
-                    val userIds = with(UserIds(repo)) { get() }
-                    debug("UserIds: ${userIds.joinToString()}")
+                        val userIds = with(UserIds(repo)) { get() }
+                        debug("UserIds: ${userIds.joinToString()}")
 
-                    userIds
-                        .map { userId ->
-                            async(Dispatchers.IO) {
-                                val (sessions) = with(Sessions(repo)) { extract(userId) }
-                                debug("finished session extraction for user $userId")
-                                userId to sessions
+                        userIds
+                            .map { userId ->
+                                async(Dispatchers.IO) {
+                                    val (sessions) = with(Sessions(repo)) { extract(userId) }
+                                    debug("finished session extraction for user $userId")
+                                    userId to sessions
+                                }
                             }
-                        }
+                            .awaitAll()
+                            .also { Cache.store(it) }
+                    }
+                else
+                    Cache.retrieve()
+                )
+                .toMap()
+
+            if (debug) {
+                sessionsPerUserId.forEach { (userId, sessions) ->
+                    debug("User: $userId")
+                    sessions.forEachIndexed { idx, it ->
+                        debug("$idx. Session:\t${it.sessionStartEvent.timestamp} - ${it.sessionEndEvent.timestamp}: ${it.sessionEventsInChronologicalOrder.size} events")
+                    }
+                }
+            }
+
+            if (task == "all") {
+                coroutineScope {
+                    findChartNames()
+                        .map { async { selectChart(it, sessionsPerUserId) } }
                         .awaitAll()
-                        .also { Cache.store(it) }
                 }
-            else
-                Cache.retrieve()
-            )
-            .toMap()
-
-        if (debug) {
-            sessionsPerUserId.forEach { (userId, sessions) ->
-                debug("User: $userId")
-                sessions.forEachIndexed { idx, it ->
-                    debug("$idx. Session:\t${it.sessionStartEvent.timestamp} - ${it.sessionEndEvent.timestamp}: ${it.sessionEventsInChronologicalOrder.size} events")
-                }
+            } else {
+                selectChart(task, sessionsPerUserId)
             }
-        }
-
-        if (task == "all") {
-            coroutineScope {
-                findChartNames()
-                    .map { async { selectTask(it, sessionsPerUserId) } }
-                    .awaitAll()
-            }
-        } else {
-            selectTask(task, sessionsPerUserId)
+        } catch (e: Exception) {
+            echo("Quitting with exception: $e", err = true)
+            debug(e.stackTraceToString())
         }
         Unit
     }
 
-    private fun selectTask(task: String, sessionsPerUserId: Map<UserId, List<Session>>) {
+    private fun selectChart(task: String, sessionsPerUserId: Map<UserId, List<Session>>) {
         val chart = findCharts()
             .getOrElse(task) { throw IllegalArgumentException("Unknown task '$task'...") }
         with(chart) { create(sessionsPerUserId) }
@@ -122,17 +127,19 @@ fun initialize(host: String): AsyncIndexRepository<Event> {
         )
 
     if (prod) {
-        restClientBuilder.setHttpClientConfigCallback {
-            it.apply {
+        restClientBuilder
+            .setRequestConfigCallback {
+                it.setSocketTimeout(60000)
+            }
+            .setHttpClientConfigCallback {
                 val awsRequestSigningInterceptor = AwsRequestSigningInterceptor(
                     Region.EU_CENTRAL_1,
                     "es",
                     Aws4Signer.create(),
                     DefaultCredentialsProvider.create()
                 )
-                addInterceptorLast(awsRequestSigningInterceptor)
+                it.addInterceptorLast(awsRequestSigningInterceptor)
             }
-        }
     }
 
     val esClient = RestHighLevelClient(restClientBuilder)

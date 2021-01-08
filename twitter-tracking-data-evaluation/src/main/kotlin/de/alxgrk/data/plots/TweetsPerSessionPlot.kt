@@ -18,9 +18,7 @@ class TweetsPerSessionPlot : Chart {
         val scrolledTweets = sessionsPerUserId.entries.flatMap { (_, sessions) ->
             sessions
                 .mapNotNull { session ->
-                    session.sessionEventsInChronologicalOrder
-                        .lastOrNull { it.action == "scroll" }
-                        ?.estimatedTweetsScrolled
+                    session.scrolledTweetsOrNull()
                 }
                 .filter { it > 0 }
         }
@@ -50,6 +48,21 @@ class TweetsPerSessionPlot : Chart {
                 }
                 showlegend = false
             }
+        }
+    }
+
+    companion object {
+        fun Session.scrolledTweetsOrNull(): Int? {
+            val lastScrollEventValue = sessionEventsInChronologicalOrder
+                .lastOrNull { it.action == "scroll" }
+                ?.estimatedTweetsScrolled
+            val firstScrollEventValue = sessionEventsInChronologicalOrder
+                .firstOrNull { it.action == "scroll" }
+                ?.estimatedTweetsScrolled
+            return if (lastScrollEventValue != null) {
+                val delta = lastScrollEventValue - (firstScrollEventValue ?: 0)
+                delta
+            } else null
         }
     }
 }
