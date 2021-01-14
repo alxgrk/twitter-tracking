@@ -3,13 +3,13 @@ package de.alxgrk.data.plots
 import de.alxgrk.data.Analyse
 import de.alxgrk.data.Session
 import de.alxgrk.data.UserId
+import de.alxgrk.data.durationInSeconds
 import kscience.plotly.Plot
 import kscience.plotly.Plotly
 import kscience.plotly.layout
 import kscience.plotly.models.AxisType
 import kscience.plotly.models.Box
 import kscience.plotly.models.BoxPoints
-import kscience.plotly.models.TextPosition
 
 class SessionLengthPlot : Chart {
 

@@ -19,17 +19,7 @@ class InteractionDistributionPerSessionPlot : Chart {
             .map { (userId, sessions) ->
                 userId to sessions.fold(Interactions(sessions.size)) { i, session ->
                     session.sessionEventsInChronologicalOrder.forEach {
-                        when (it.target) {
-                            "like" -> i.likes++
-                            "retweet" -> i.retweets++
-                            "posting" -> i.postings++
-                            "followByTweet" -> i.followsByTweet++
-                            "follow" -> i.follows++
-                            "clickOnMedia" -> i.mediaClicks++
-                            "clickOnHashtag" -> i.hashtagClicks++
-                            "openDetailsView" -> i.detailViews++
-                            "visitAuthorsProfile" -> i.authorProfileClicks++
-                        }
+                        i.increaseCountFor(it.target)
                     }
                     i
                 }

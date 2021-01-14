@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
+import com.github.ajalt.clikt.parameters.types.path
+import de.alxgrk.data.pca.PCA
 import de.alxgrk.data.plots.findChartNames
 import de.alxgrk.data.plots.findCharts
 import io.inbot.eskotlinwrapper.AsyncIndexRepository
@@ -38,12 +40,17 @@ class Analyse : CliktCommand() {
 
     internal val debug by option(help = "enable debug log output").flag()
 
+    internal val trace by option(help = "enable trace log output").flag()
+
     internal val refresh by option(help = "clear cache and get events from elasticsearch").flag()
 
     internal val export by option(help = "export plot as svg using Orca (requires Docker on your machine)").flag()
 
-    private val task by argument(help = "all, ${findChartNames().joinToString()}")
-        .choice("all", *findChartNames().toTypedArray())
+    internal val `pca-input` by option(help = "the input matrix (csv file) to use for PCA")
+        .path(mustExist = true, canBeDir = false)
+
+    private val task by argument(help = "all, manual, pca, ${findChartNames().joinToString()}")
+        .choice("all", "manual", "pca", *findChartNames().toTypedArray())
 
     override fun run() = runBlocking {
         try {
@@ -87,6 +94,12 @@ class Analyse : CliktCommand() {
                         .map { async { selectChart(it, sessionsPerUserId) } }
                         .awaitAll()
                 }
+            } else if (task == "manual") {
+                sessionsPerUserId.forEach { (u, s) ->
+                    println("First session of user ${u.id} was on ${s.first().sessionStartEvent.zonedTimestamp()}")
+                }
+            } else if (task == "pca") {
+                with(PCA(sessionsPerUserId)) { execute() }
             } else {
                 selectChart(task, sessionsPerUserId)
             }
@@ -106,6 +119,11 @@ class Analyse : CliktCommand() {
     operator fun Boolean.invoke(logMessage: String) {
         if (this)
             echo(logMessage)
+    }
+
+    operator fun Boolean.invoke(logMessage: () -> String) {
+        if (this)
+            echo(logMessage())
     }
 
     fun info(message: String) {
