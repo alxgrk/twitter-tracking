@@ -4,6 +4,7 @@ import de.alxgrk.data.Analyse
 import de.alxgrk.data.Session
 import de.alxgrk.data.UserId
 import de.alxgrk.data.durationInSeconds
+import de.alxgrk.data.fractionOfSessionTypes
 import de.alxgrk.data.pca.Configuration.numberOfScrolledTweetsBuckets
 import de.alxgrk.data.pca.Configuration.numberOfSessionLengthBuckets
 import de.alxgrk.data.pca.Configuration.sizeOfScrolledTweetsBuckets
@@ -11,22 +12,22 @@ import de.alxgrk.data.pca.Configuration.startDateOfPeriod
 import de.alxgrk.data.plots.Interactions
 import de.alxgrk.data.plots.TweetsPerSessionPlot.Companion.scrolledTweetsOrNull
 import de.alxgrk.data.plots.store
-import de.alxgrk.data.sessionTypes
+import hep.dataforge.values.Value
 import kscience.plotly.Plotly
+import kscience.plotly.layout
 import kscience.plotly.models.Scatter
+import kscience.plotly.models.Shape
+import kscience.plotly.models.ShapeType
 import kscience.plotly.scatter
-import smile.math.matrix.Matrix
 import smile.projection.PCA
 import smile.projection.pca
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.stream.Stream
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
-import kotlin.streams.toList
 
 object Configuration {
     val startDateOfPeriod: LocalDate = LocalDate.of(2020, 9, 1)
@@ -37,8 +38,6 @@ object Configuration {
 
 class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
 
-    val file = File("./pca-matrix-${System.currentTimeMillis()}.csv")
-
     private val featureMatrix: Map<UserId, FeatureRow> = sessionsPerUserId.mapValues { (_, sessions) ->
         val sessionsPerDayOverPeriod = sessions
             .map { LocalDate.from(it.sessionStartEvent.zonedTimestamp()) }
@@ -46,24 +45,24 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
 
         val sessionLengths = sessions
             .map { session -> (session.durationInSeconds() / 60).toInt() }
-            .foldTo(FeatureBuckets.ZeroToLimitBuckets(numberOfSessionLengthBuckets))
+            .foldTo(FeatureBuckets.ZeroToLimitBuckets(numberOfSessionLengthBuckets) { it.toDouble() / sessions.size })
 
         val thirtyMinuteBucketsOverDay = sessions
             .map { session -> LocalTime.from(session.sessionStartEvent.zonedTimestamp()) }
             .foldTo(FeatureBuckets.ThirtyMinuteBucketsOverDay())
 
-        val sessionTypesPerSession = sessions.sessionTypes()
+        val sessionTypes = sessions.fractionOfSessionTypes()
             .entries
-            .foldTo(FeatureBuckets.SessionTypes())
+            .foldTo(FeatureBuckets.SessionTypesPerSession())
 
-        val interactionTypesPerSession = sessions
+        val interactionTypes = sessions
             .fold(Interactions(sessions.size)) { i, session ->
                 session.sessionEventsInChronologicalOrder.forEach {
                     i.increaseCountFor(it.target)
                 }
                 i
             }
-            .let { FeatureBuckets.InteractionTypes().apply { insertIntoBucket(it) } }
+            .let { FeatureBuckets.InteractionTypesPerSession().apply { insertIntoBucket(it) } }
 
         val scrolledTweetsPerSession = sessions
             .mapNotNull { session -> session.scrolledTweetsOrNull() }
@@ -75,8 +74,8 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
             sessionsPerDayOverPeriod,
             sessionLengths,
             thirtyMinuteBucketsOverDay,
-            sessionTypesPerSession,
-            interactionTypesPerSession,
+            sessionTypes,
+            interactionTypes,
             scrolledTweetsPerSession
         )
     }
@@ -86,7 +85,9 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
             buckets.apply { insertIntoBucket(elements) }
         }
 
-    private fun Analyse.transformMatrix(): Array<DoubleArray> {
+    val file = File("./pca-matrix-${System.currentTimeMillis()}.csv")
+
+    private fun Analyse.transformMatrix(): List<DoubleArray> {
         val withSimilarRows = featureMatrix
             .flatMap { (_, r) ->
                 val rows = mutableListOf(r)
@@ -101,23 +102,18 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
 
         val expectedAnomalousRows = (withSimilarRows.size * Random.nextDouble(0.02, 0.03))
         val anomalousRows = AnomalousRows.generate(withSimilarRows, expectedAnomalousRows.toInt())
-        debug("Generated ${anomalousRows.size} anomalous rows from uniformly distributed fake user profiles.")
+        info("Generated ${anomalousRows.size} anomalous rows from uniformly distributed fake user profiles.")
 
-        return Stream.concat(withSimilarRows.stream(), anomalousRows.stream())
+        return sequenceOf(*(withSimilarRows.toTypedArray()), *(anomalousRows.toTypedArray()))
             .map { it.toDoubleArray() }
             .toList()
-            .shuffled()
             .onEach { file.appendText("${it.joinToString()}\n") }
-            .toTypedArray()
     }
 
-    // private fun readMatrix(pcaInputMatrix: Path): Array<DoubleArray> =
-    //     pcaInputMatrix.toFile().readLines()
-    //         .map { line -> doubleArrayOf(*(line.split(", ").map { it.toDouble() }.toDoubleArray())) }
-    //         .toTypedArray()
-
     fun Analyse.execute() {
-        val inputMatrix = transformMatrix() // if (`pca-input` == null) transformMatrix() else readMatrix(`pca-input`!!)
+        val inputMatrix = transformMatrix()
+            .shuffled()
+            .toTypedArray()
 
         val result = computePCs(inputMatrix)
 
@@ -128,7 +124,9 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
     private fun Analyse.computePCs(inputMatrix: Array<DoubleArray>): PCA {
         val result = pca(inputMatrix)
 
-        (3 until 7).forEach { kTopPCs ->
+        val firstPC = 3
+        val lastPC = 7
+        (firstPC..lastPC).forEach { kTopPCs ->
             info("Running evaluation for top $kTopPCs PCs.")
             debug { "Variances: " + result.variance.joinToString() }
             debug { "Variance proportions: " + result.cumulativeVarianceProportion.joinToString() }
@@ -168,20 +166,27 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
             }.toMap()
 
             val falsePositiveRates = mutableMapOf<Int, Double>()
-            val truePositiveRates = mutableMapOf<AnomalousRows.Profiles, MutableMap<Int, Double>>()
-            (0 until 1250 step 25).map { threshold ->
+            val truePositiveRatesPerProfile = mutableMapOf<AnomalousRows.Profiles, MutableMap<Int, Double>>()
+            val truePositiveRatesOverAll = mutableMapOf<Int, Double>()
+            (0 until 50000 step 200).forEach { threshold ->
                 val fps = speOfNormalUsers.map { it >= threshold }.count { it }
                 falsePositiveRates[threshold] = fps / numberOfUsers.toDouble()
 
                 speOfAnomalousUsers.forEach { (profile, values) ->
                     val tps = values.map { it >= threshold }.count { it }
-                    truePositiveRates.computeIfAbsent(profile) { mutableMapOf() }
-                    truePositiveRates[profile]?.put(threshold, tps / numberOfUsers.toDouble())
+                    truePositiveRatesPerProfile.computeIfAbsent(profile) { mutableMapOf() }
+                    truePositiveRatesPerProfile[profile]?.put(threshold, tps / numberOfUsers.toDouble())
                 }
+
+                val allTps = speOfAnomalousUsers.map { (_, values) -> values.map { it >= threshold }.count { it } }.sum()
+                truePositiveRatesOverAll[threshold] = allTps / (speOfAnomalousUsers.size * numberOfUsers.toDouble())
             }
 
-            plotRates(kTopPCs, falsePositiveRates, truePositiveRates)
+            plotRates(kTopPCs, falsePositiveRates, truePositiveRatesPerProfile)
 
+            if (kTopPCs == firstPC) {
+                plotROC(falsePositiveRates.values, truePositiveRatesOverAll.values)
+            }
         }
 
         return result
@@ -195,14 +200,14 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
         val fpScatter = Scatter {
             x.set(falsePositiveRates.keys)
             y.set(falsePositiveRates.values)
-            name = "FP-Rate by threshold"
+            name = "FP-Rate"
         }
 
         val tpScatters = truePositiveRates.map { (k, v) ->
             Scatter {
                 x.set(v.keys)
                 y.set(v.values)
-                name = "TP-Rate of Profile ${k.name} by threshold"
+                name = "TP-Rate of ${k.name}"
             }
         }
             .toTypedArray()
@@ -210,23 +215,63 @@ class PCA(sessionsPerUserId: Map<UserId, List<Session>>) {
         store(
             Plotly.plot {
                 traces(fpScatter, *tpScatters)
+
+                layout {
+                    title = "TP-/FP-Rate using Top $kTopPCs PCs"
+                    xaxis {
+                        title = "Detection Threshold for Squared Prediction Error"
+                    }
+                    yaxis {
+                        title = "True-/False-Positive-Rate"
+                    }
+                }
             },
-            File("./PCA-Rates-top${kTopPCs}PCs.html")
+            File("./PCA-Rates-top${kTopPCs}PCs.${if (export) "svg" else "html"}")
         )
     }
 
-    private fun Analyse.plotU(inputMatrix: Array<DoubleArray>, pc1: DoubleArray?, i: Int) {
-        val Xv = Matrix(inputMatrix).mv(pc1)
-        val XvNorm = Xv.norm2()
-        val projectionU = Xv.map { it / XvNorm }
+    private fun Analyse.plotROC(
+        falsePositiveRates: MutableCollection<Double>,
+        truePositiveRates: MutableCollection<Double>
+    ) {
+        fun diagonalLine() = Shape {
+            type = ShapeType.line
+            x0 = Value.of(0)
+            y0 = Value.of(0)
+            x1 = Value.of(1)
+            y1 = Value.of(1)
+            line {
+                color("rgb(210, 124, 107)")
+                width = 3.5
+            }
+        }
+
+        val beginning = falsePositiveRates.indexOfLast { it >= 1.0 }
+        val end = falsePositiveRates.indexOfFirst { it == 0.0 }
+
         store(
             Plotly.plot {
                 scatter {
-                    this.x.set(projectionU.indices)
-                    this.y.set(projectionU)
+                    val xVals = falsePositiveRates.toList().subList(beginning, end).asReversed()
+                    val yVals = truePositiveRates.toList().subList(beginning, end).asReversed()
+                    x.set(xVals)
+                    y.set(yVals)
+                }
+
+                layout {
+                    title = "Receiver Operation Characteristic (ROC) Curve"
+                    xaxis {
+                        title = "False-Positive-Rate"
+                        range = 0.0..1.0
+                    }
+                    yaxis {
+                        title = "True-Positive-Rate"
+                        range = 0.0..1.0
+                    }
+                    shapes = listOf(diagonalLine(), diagonalLine())
                 }
             },
-            File("./u$i.html")
+            File("./PCA-ROC-Curve.${if (export) "svg" else "html"}")
         )
     }
 }

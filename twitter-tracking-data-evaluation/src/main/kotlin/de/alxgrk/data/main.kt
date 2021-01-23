@@ -46,9 +46,6 @@ class Analyse : CliktCommand() {
 
     internal val export by option(help = "export plot as svg using Orca (requires Docker on your machine)").flag()
 
-    internal val `pca-input` by option(help = "the input matrix (csv file) to use for PCA")
-        .path(mustExist = true, canBeDir = false)
-
     private val task by argument(help = "all, manual, pca, ${findChartNames().joinToString()}")
         .choice("all", "manual", "pca", *findChartNames().toTypedArray())
 
