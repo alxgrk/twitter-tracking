@@ -9,6 +9,7 @@ import kscience.plotly.layout
 import kscience.plotly.models.AxisType
 import kscience.plotly.models.Bar
 import kscience.plotly.models.BarMode
+import kscience.plotly.models.TextPosition
 
 class InteractionDistributionPerSessionPlot : Chart {
 
@@ -18,17 +19,7 @@ class InteractionDistributionPerSessionPlot : Chart {
             .map { (userId, sessions) ->
                 userId to sessions.fold(Interactions(sessions.size)) { i, session ->
                     session.sessionEventsInChronologicalOrder.forEach {
-                        when (it.target) {
-                            "like" -> i.likes++
-                            "retweet" -> i.retweets++
-                            "posting" -> i.postings++
-                            "followByTweet" -> i.followsByTweet++
-                            "follow" -> i.follows++
-                            "clickOnMedia" -> i.mediaClicks++
-                            "clickOnHashtag" -> i.hashtagClicks++
-                            "openDetailsView" -> i.detailViews++
-                            "visitAuthorsProfile" -> i.authorProfileClicks++
-                        }
+                        i.increaseCountFor(it.target)
                     }
                     i
                 }
@@ -50,20 +41,21 @@ class InteractionDistributionPerSessionPlot : Chart {
                         "visitAuthorsProfiles / session"
                     )
                 )
-                y.set(
-                    listOf(
-                        interactions.likesPerSession,
-                        interactions.retweetsPerSession,
-                        interactions.postingsPerSession,
-                        interactions.followsByTweetPerSession,
-                        interactions.followsPerSession,
-                        interactions.mediaClicksPerSession,
-                        interactions.hashtagClicksPerSession,
-                        interactions.detailViewsPerSession,
-                        interactions.authorProfileClicksPerSession,
-                    )
+                val freqs = listOf(
+                    interactions.likesPerSession,
+                    interactions.retweetsPerSession,
+                    interactions.postingsPerSession,
+                    interactions.followsByTweetPerSession,
+                    interactions.followsPerSession,
+                    interactions.mediaClicksPerSession,
+                    interactions.hashtagClicksPerSession,
+                    interactions.detailViewsPerSession,
+                    interactions.authorProfileClicksPerSession,
                 )
+                y.set(freqs)
                 name = userId.id.substring(0, 8)
+                // textsList = freqs.map { "%.3f".format(it) }
+                // textposition = TextPosition.outside
                 marker {
                     color(i.toRandomColor())
                 }
@@ -87,20 +79,23 @@ class InteractionDistributionPerSessionPlot : Chart {
                     "visitAuthorsProfiles / session"
                 )
             )
+            val freqs = listOf(
+                averageOf { it.likesPerSession },
+                averageOf { it.retweetsPerSession },
+                averageOf { it.postingsPerSession },
+                averageOf { it.followsByTweetPerSession },
+                averageOf { it.followsPerSession },
+                averageOf { it.mediaClicksPerSession },
+                averageOf { it.hashtagClicksPerSession },
+                averageOf { it.detailViewsPerSession },
+                averageOf { it.authorProfileClicksPerSession }
+            )
             y.set(
-                listOf(
-                    averageOf { it.likesPerSession },
-                    averageOf { it.retweetsPerSession },
-                    averageOf { it.postingsPerSession },
-                    averageOf { it.followsByTweetPerSession },
-                    averageOf { it.followsPerSession },
-                    averageOf { it.mediaClicksPerSession },
-                    averageOf { it.hashtagClicksPerSession },
-                    averageOf { it.detailViewsPerSession },
-                    averageOf { it.authorProfileClicksPerSession }
-                )
+                freqs
             )
             name = "Average over all Users"
+            // textsList = freqs.map { "%.3f".format(it) }
+            // textposition = TextPosition.outside
             marker {
                 color("rgb(129, 24, 75)")
             }
@@ -129,7 +124,7 @@ class InteractionDistributionPerSessionPlot : Chart {
 
                 barmode = BarMode.group
                 bargap = 0.15
-                bargroupgap = 0.1
+                bargroupgap = 0.01
             }
         }
     }

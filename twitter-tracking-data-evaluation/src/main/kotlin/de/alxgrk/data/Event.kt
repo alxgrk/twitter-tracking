@@ -1,6 +1,7 @@
 package de.alxgrk.data
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import java.time.ZonedDateTime
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Event(
@@ -17,4 +18,10 @@ data class Event(
         BROWSER,
         ANDROID
     }
+
+    fun zonedTimestamp() =
+        if (timestamp.endsWith("Z", ignoreCase = false))
+            ZonedDateTime.parse(timestamp)
+        else
+            ZonedDateTime.parse(timestamp + "Z")
 }

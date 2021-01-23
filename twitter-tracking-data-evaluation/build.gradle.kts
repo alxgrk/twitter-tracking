@@ -26,6 +26,9 @@ dependencies {
     implementation("de.undercouch:bson4jackson:2.11.0")
     implementation("org.reflections:reflections:0.9.12")
     implementation("org.testcontainers:testcontainers:1.15.0")
+    implementation("com.github.haifengl:smile-kotlin:2.6.0")
+    implementation("org.bytedeco:openblas:0.3.10-1.5.4")
+    implementation("org.bytedeco:openblas-platform:0.3.10-1.5.4")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.0")

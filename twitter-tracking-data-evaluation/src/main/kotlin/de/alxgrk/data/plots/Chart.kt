@@ -13,64 +13,26 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.images.builder.Transferable
 import org.testcontainers.utility.DockerImageName
 import java.io.File
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.time.temporal.Temporal
 import kotlin.math.absoluteValue
 import kotlin.random.Random
 import kotlin.reflect.full.createInstance
 
 interface Chart {
 
-    val chartFile: File
-        get() = File("./${this::class.simpleName!!}.html")
-
     fun Analyse.create(sessionsPerUserId: Map<UserId, List<Session>>) {
         val chartFile = File("./${this@Chart::class.simpleName!!}.${if (export) "svg" else "html"}")
         val plot = createPlot(sessionsPerUserId)
 
-        if (export) {
-            OrcaContainer(DockerImageName.parse("quay.io/plotly/orca"))
-                .withExposedPorts(9091)
-                .use { container ->
-                    container.start()
-                    val json = plot.toJson().toString()
-
-                    container.copyFileToContainer(Transferable.of(json.toByteArray()), "/root/input.json")
-                    val result = container.execInContainer(
-                        "orca", "graph", "/root/input.json",
-                        "-f", "svg",
-                        "-d", "/root/",
-                        "-o", "plot.svg"
-                    )
-                    container.copyFileFromContainer("/root/plot.svg", chartFile.absolutePath)
-                    debug("Orca finished with code: ${result.exitCode}")
-                    info("Stored chart at ${chartFile.absolutePath}")
-                }
-        } else {
-            plot.makeFile(path = chartFile.toPath(), show = false)
-            info("Stored chart at ${chartFile.absolutePath}")
-        }
+        store(plot, chartFile)
     }
 
     fun Analyse.createPlot(sessionsPerUserId: Map<UserId, List<Session>>): Plot
 
-    fun Session.durationInSeconds(): Long = ChronoUnit.SECONDS.between(
-        sessionStartEvent.timestamp.zonedOrLocal(),
-        sessionEndEvent.timestamp.zonedOrLocal()
-    )
-
     fun Event.durationInMilliseconds(other: Event): Long = ChronoUnit.MILLIS.between(
-        this.timestamp.zonedOrLocal(),
-        other.timestamp.zonedOrLocal()
+        this.zonedTimestamp(),
+        other.zonedTimestamp()
     ).absoluteValue
-
-    fun String.zonedOrLocal(): Temporal =
-        if (this.endsWith("Z", ignoreCase = false))
-            ZonedDateTime.parse(this)
-        else
-            LocalDateTime.parse(this)
 
     fun Int.toRandomColor(): String {
         val color =
@@ -78,6 +40,31 @@ interface Chart {
                 .map { minOf((Random.nextInt(60, 120) * it * (this * 0.3)).toInt(), 210) }
                 .joinToString(",")
         return "rgb($color)"
+    }
+}
+
+fun Analyse.store(plot: Plot, chartFile: File) {
+    if (export) {
+        OrcaContainer(DockerImageName.parse("quay.io/plotly/orca"))
+            .withExposedPorts(9091)
+            .use { container ->
+                container.start()
+                val json = plot.toJson().toString()
+
+                container.copyFileToContainer(Transferable.of(json.toByteArray()), "/root/input.json")
+                val result = container.execInContainer(
+                    "orca", "graph", "/root/input.json",
+                    "-f", "svg",
+                    "-d", "/root/",
+                    "-o", "plot.svg"
+                )
+                container.copyFileFromContainer("/root/plot.svg", chartFile.absolutePath)
+                debug("Orca finished with code: ${result.exitCode}")
+                info("Stored chart at ${chartFile.absolutePath}")
+            }
+    } else {
+        plot.makeFile(path = chartFile.toPath(), show = false)
+        info("Stored chart at ${chartFile.absolutePath}")
     }
 }
 

@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
+import com.github.ajalt.clikt.parameters.types.path
+import de.alxgrk.data.pca.PCA
 import de.alxgrk.data.plots.findChartNames
 import de.alxgrk.data.plots.findCharts
 import io.inbot.eskotlinwrapper.AsyncIndexRepository
@@ -38,61 +40,74 @@ class Analyse : CliktCommand() {
 
     internal val debug by option(help = "enable debug log output").flag()
 
+    internal val trace by option(help = "enable trace log output").flag()
+
     internal val refresh by option(help = "clear cache and get events from elasticsearch").flag()
 
     internal val export by option(help = "export plot as svg using Orca (requires Docker on your machine)").flag()
 
-    private val task by argument(help = "all, ${findChartNames().joinToString()}")
-        .choice("all", *findChartNames().toTypedArray())
+    private val task by argument(help = "all, manual, pca, ${findChartNames().joinToString()}")
+        .choice("all", "manual", "pca", *findChartNames().toTypedArray())
 
     override fun run() = runBlocking {
-        val repo = initialize(host)
+        try {
+            val repo = initialize(host)
 
-        val sessionsPerUserId = (
-            if (refresh || !Cache.exists())
-                coroutineScope {
+            val sessionsPerUserId = (
+                if (refresh || !Cache.exists())
+                    coroutineScope {
 
-                    val userIds = with(UserIds(repo)) { get() }
-                    debug("UserIds: ${userIds.joinToString()}")
+                        val userIds = with(UserIds(repo)) { get() }
+                        debug("UserIds: ${userIds.joinToString()}")
 
-                    userIds
-                        .map { userId ->
-                            async(Dispatchers.IO) {
-                                val (sessions) = with(Sessions(repo)) { extract(userId) }
-                                debug("finished session extraction for user $userId")
-                                userId to sessions
+                        userIds
+                            .map { userId ->
+                                async(Dispatchers.IO) {
+                                    val (sessions) = with(Sessions(repo)) { extract(userId) }
+                                    debug("finished session extraction for user $userId")
+                                    userId to sessions
+                                }
                             }
-                        }
+                            .awaitAll()
+                            .also { Cache.store(it) }
+                    }
+                else
+                    Cache.retrieve()
+                )
+                .toMap()
+
+            if (debug) {
+                sessionsPerUserId.forEach { (userId, sessions) ->
+                    debug("User: $userId")
+                    sessions.forEachIndexed { idx, it ->
+                        debug("$idx. Session:\t${it.sessionStartEvent.timestamp} - ${it.sessionEndEvent.timestamp}: ${it.sessionEventsInChronologicalOrder.size} events")
+                    }
+                }
+            }
+
+            if (task == "all") {
+                coroutineScope {
+                    findChartNames()
+                        .map { async { selectChart(it, sessionsPerUserId) } }
                         .awaitAll()
-                        .also { Cache.store(it) }
                 }
-            else
-                Cache.retrieve()
-            )
-            .toMap()
-
-        if (debug) {
-            sessionsPerUserId.forEach { (userId, sessions) ->
-                debug("User: $userId")
-                sessions.forEachIndexed { idx, it ->
-                    debug("$idx. Session:\t${it.sessionStartEvent.timestamp} - ${it.sessionEndEvent.timestamp}: ${it.sessionEventsInChronologicalOrder.size} events")
+            } else if (task == "manual") {
+                sessionsPerUserId.forEach { (u, s) ->
+                    println("First session of user ${u.id} was on ${s.first().sessionStartEvent.zonedTimestamp()}")
                 }
+            } else if (task == "pca") {
+                with(PCA(sessionsPerUserId)) { execute() }
+            } else {
+                selectChart(task, sessionsPerUserId)
             }
-        }
-
-        if (task == "all") {
-            coroutineScope {
-                findChartNames()
-                    .map { async { selectTask(it, sessionsPerUserId) } }
-                    .awaitAll()
-            }
-        } else {
-            selectTask(task, sessionsPerUserId)
+        } catch (e: Exception) {
+            echo("Quitting with exception: $e", err = true)
+            debug(e.stackTraceToString())
         }
         Unit
     }
 
-    private fun selectTask(task: String, sessionsPerUserId: Map<UserId, List<Session>>) {
+    private fun selectChart(task: String, sessionsPerUserId: Map<UserId, List<Session>>) {
         val chart = findCharts()
             .getOrElse(task) { throw IllegalArgumentException("Unknown task '$task'...") }
         with(chart) { create(sessionsPerUserId) }
@@ -101,6 +116,11 @@ class Analyse : CliktCommand() {
     operator fun Boolean.invoke(logMessage: String) {
         if (this)
             echo(logMessage)
+    }
+
+    operator fun Boolean.invoke(logMessage: () -> String) {
+        if (this)
+            echo(logMessage())
     }
 
     fun info(message: String) {
@@ -122,17 +142,19 @@ fun initialize(host: String): AsyncIndexRepository<Event> {
         )
 
     if (prod) {
-        restClientBuilder.setHttpClientConfigCallback {
-            it.apply {
+        restClientBuilder
+            .setRequestConfigCallback {
+                it.setSocketTimeout(60000)
+            }
+            .setHttpClientConfigCallback {
                 val awsRequestSigningInterceptor = AwsRequestSigningInterceptor(
                     Region.EU_CENTRAL_1,
                     "es",
                     Aws4Signer.create(),
                     DefaultCredentialsProvider.create()
                 )
-                addInterceptorLast(awsRequestSigningInterceptor)
+                it.addInterceptorLast(awsRequestSigningInterceptor)
             }
-        }
     }
 
     val esClient = RestHighLevelClient(restClientBuilder)

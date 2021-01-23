@@ -36,6 +36,9 @@ local.properties
 # cache
 *.bson
 
+# PCA
+*.csv
+
 # plotly
 *.html
 *.svg
